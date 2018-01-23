@@ -1,10 +1,26 @@
 var request = require('request');
 var cheerio = require('cheerio');
-var url     = require('url');
+var url = require('url');
 
+/*
+ * Scrap Google. Usage example:
+ * var options = {
+ *   query: 'site:forbes.com nvidia',
+ *   host: 'www.google.com',
+ *   lang: 'us',
+ *   range: {
+ *     min: '3-8-2017',
+ *     max: '3-8-2017'
+ *   },
+ *   sortBy: "date",
+ *   limit: 5
+ * };
+ * 
+ * search(options, callback);
+ */
 function search(options, callback) {
 
-  var session = request.defaults({ jar : true });
+  var session = request.defaults({ jar: true });
   var host = options.host || 'www.google.com';
   var solver = options.solver;
   var params = options.params || {};
@@ -12,17 +28,19 @@ function search(options, callback) {
 
   params.hl = params.hl || options.lang || 'en';
 
-  if(options.age) params.tbs = 'qdr:' + options.age;
-  if(options.query) params.q = options.query;
+  if (options.age) params.tbs = 'qdr:' + options.age;
+  if (options.range) params.tbs = 'cdr:1,cd_min:' + options.range.min + ',cd_max:' + options.range.max;
+  if (options.query) params.q = options.query;
+  if (options.sortBy) params.tbs = params.tbs + ',sbd:' + (options.sortBy === 'date' ? 1 : 0);
 
   params.start = params.start || 0;
 
   getPage(params, function onPage(err, body) {
-    if(err) {
-      if(err.code !== 'ECAPTCHA' || !solver) return callback(err);
+    if (err) {
+      if (err.code !== 'ECAPTCHA' || !solver) return callback(err);
 
-      solveCaptcha(err.location, function(err, page) {
-        if(err) return callback(err);
+      solveCaptcha(err.location, function (err, page) {
+        if (err) return callback(err);
         onPage(null, page);
       });
 
@@ -30,22 +48,21 @@ function search(options, callback) {
     }
 
     var currentResults = extractResults(body);
-
-    var newResults = currentResults.filter(function(result) {
+    var newResults = currentResults.filter(function (result) {
       return results.indexOf(result) === -1;
     });
 
-    newResults.forEach(function(result) {
-      callback(null, result);
-    });
+    if (newResults.length > 0) {
+      callback(null, newResults);
+    }
 
-    if(newResults.length === 0) {
+    if (newResults.length === 0) {
       return;
     }
 
     results = results.concat(newResults);
 
-    if(!options.limit || results.length < options.limit) {
+    if (!options.limit || results.length < options.limit) {
       params.start = results.length;
       getPage(params, onPage);
     }
@@ -53,18 +70,20 @@ function search(options, callback) {
 
 
   function getPage(params, callback) {
+
     session.get({
-        uri: 'https://' + host + '/search',
-        qs: params,
-        followRedirect: false
-      }, 
-      function(err, res) {
-        if(err) return callback(err);
-
-        if(res.statusCode === 302) {
+      uri: 'http://' + host + '/search',
+      qs: params,
+      followRedirect: true,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36'
+      }
+    },
+      function (err, res) {
+        if (err) return callback(err);
+        if (res.statusCode === 302) {
           var parsed = url.parse(res.headers.location, true);
-
-          if(parsed.pathname !== '/search') {
+          if (parsed.pathname !== '/search') {
             var err = new Error('Captcha');
             err.code = 'ECAPTCHA';
             err.location = res.headers.location;
@@ -75,8 +94,8 @@ function search(options, callback) {
               uri: res.headers.location,
               qs: params,
               followRedirect: false
-            }, function(err, res) {
-              if(err) return callback(err);
+            }, function (err, res) {
+              if (err) return callback(err);
               callback(null, res.body);
             });
             return;
@@ -92,10 +111,10 @@ function search(options, callback) {
     var results = [];
     var $ = cheerio.load(body);
 
-    $('.g h3 a').each(function(i, elem) {
+    $('.g h3 a').each(function (i, elem) {
       var parsed = url.parse(elem.attribs.href, true);
-      if (parsed.pathname === '/url') {
-        results.push(parsed.query.q);
+      if (parsed.href) {
+        results.push(parsed.href);
       }
     });
 
@@ -111,8 +130,8 @@ function search(options, callback) {
     });
 
     // Fetch captcha page
-    session.get(captchaUrl, function(err, res) {
-      if(err) return callback(err);
+    session.get(captchaUrl, function (err, res) {
+      if (err) return callback(err);
 
       var $ = cheerio.load(res.body);
       var captchaId = $('input[name=id]').attr('value');
@@ -121,24 +140,24 @@ function search(options, callback) {
       var imgSrc = $('img').attr('src');
 
       // Fetch captcha image
-      session.get({uri: baseUrl + imgSrc, encoding: null}, function(err, res) {
-        if(err) return callback(err);
+      session.get({ uri: baseUrl + imgSrc, encoding: null }, function (err, res) {
+        if (err) return callback(err);
 
         // Send to solver
-        solver.solve(res.body, function(err, id, solution) {
-          if(err) return callback(err);
+        solver.solve(res.body, function (err, id, solution) {
+          if (err) return callback(err);
 
           // Try solution
           session.get({
-              uri: baseUrl + '/sorry/' + formAction,
-              qs: {
-                id: captchaId,
-                captcha: solution,
-                continue: continueUrl
-              }
-            }, 
-            function(err, res) {
-              if(res.statusCode !== 200) return callback(new Error('Captcha decoding failed'));
+            uri: baseUrl + '/sorry/' + formAction,
+            qs: {
+              id: captchaId,
+              captcha: solution,
+              continue: continueUrl
+            }
+          },
+            function (err, res) {
+              if (res.statusCode !== 200) return callback(new Error('Captcha decoding failed'));
               callback(null, res.body);
             }
           );
