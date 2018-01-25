@@ -1,6 +1,7 @@
 var request = require('request');
 var cheerio = require('cheerio');
 var url = require('url');
+var randomUseragent = require('random-useragent');
 
 /*
  * Scrap Google. Usage example:
@@ -31,7 +32,7 @@ function search(options, callback) {
   if (options.age) params.tbs = 'qdr:' + options.age;
   if (options.range) params.tbs = 'cdr:1,cd_min:' + options.range.min + ',cd_max:' + options.range.max;
   if (options.query) params.q = options.query;
-  if (options.sortBy) params.tbs = params.tbs + ',sbd:' + (options.sortBy === 'date' ? 1 : 0);
+  if (options.sortBy) params.tbs = params.tbs + ',sbd:' + (options.sortBy === 'date' ? 1 : 0) + '&tbm='
 
   params.start = params.start || 0;
 
@@ -70,17 +71,17 @@ function search(options, callback) {
 
 
   function getPage(params, callback) {
-
     session.get({
-      uri: 'http://' + host + '/search',
+      uri: 'https://' + host + '/search',
       qs: params,
       followRedirect: true,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36'
+        'User-Agent': randomUseragent.getRandom()
       }
     },
-      function (err, res) {
+    function (err, res) {
         if (err) return callback(err);
+
         if (res.statusCode === 302) {
           var parsed = url.parse(res.headers.location, true);
           if (parsed.pathname !== '/search') {
@@ -171,5 +172,26 @@ function search(options, callback) {
   }
 
 }
+
+// var options = {
+//   query: 'forbes.com apple',
+//   host: 'www.google.com',
+//   lang: 'us',
+//   range: {
+//     min: '3/1/2017',
+//     max: '3/10/2017'
+//   },
+//   sortBy: "date",
+//   params: {
+//     source: 'lnt'
+//   }
+// };
+
+
+// search(options, function (err, url) {
+//   // This is called for each result
+//   if (err) throw err;
+//   console.log(url)
+// });
 
 module.exports.search = search;
