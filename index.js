@@ -175,25 +175,25 @@ function search(options, callback) {
 
 }
 
-var options = {
-  query: 'forbes.com apple',
-  host: 'www.google.com',
-  lang: 'us',
-  range: {
-    min: '3/1/2017',
-    max: '3/10/2017'
-  },
-  sortBy: "date",
-  params: {
-    source: 'lnt'
-  }
-};
+// var options = {
+//   query: 'apple',
+//   host: 'www.google.com',
+//   lang: 'us',
+//   range: {
+//     min: '3/1/2017',
+//     max: '3/10/2017'
+//   },
+//   sortBy: "date",
+//   params: {
+//     source: 'lnt'
+//   }
+// };
 
 
-search(options, function (err, url) {
-  // This is called for each result
-  if (err) throw err;
-  console.log(url)
-});
+// search(options, function (err, url) {
+//   // This is called for each result
+//   if (err) throw err;
+//   console.log(url)
+// });
 
 module.exports.search = search;
