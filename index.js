@@ -79,7 +79,7 @@ function search(options, callback) {
         'User-Agent': randomUseragent.getRandom()
       }
     },
-    function (err, res) {
+      function (err, res) {
         if (err) return callback(err);
 
         if (res.statusCode === 302) {
@@ -114,8 +114,8 @@ function search(options, callback) {
 
     $('.g h3 a').each(function (i, elem) {
       var parsed = url.parse(elem.attribs.href, true);
-      if (parsed.href) {
-        results.push(parsed.href);
+      if (parsed.pathname === '/url') {
+        results.push(parsed.query.q);
       }
     });
 
@@ -173,25 +173,25 @@ function search(options, callback) {
 
 }
 
-// var options = {
-//   query: 'forbes.com apple',
-//   host: 'www.google.com',
-//   lang: 'us',
-//   range: {
-//     min: '3/1/2017',
-//     max: '3/10/2017'
-//   },
-//   sortBy: "date",
-//   params: {
-//     source: 'lnt'
-//   }
-// };
+var options = {
+  query: 'forbes.com apple',
+  host: 'www.google.com',
+  lang: 'us',
+  range: {
+    min: '3/1/2017',
+    max: '3/10/2017'
+  },
+  sortBy: "date",
+  params: {
+    source: 'lnt'
+  }
+};
 
 
-// search(options, function (err, url) {
-//   // This is called for each result
-//   if (err) throw err;
-//   console.log(url)
-// });
+search(options, function (err, url) {
+  // This is called for each result
+  if (err) throw err;
+  console.log(url)
+});
 
 module.exports.search = search;
