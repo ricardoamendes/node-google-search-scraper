@@ -81,7 +81,9 @@ function search(options, callback) {
     },
       function (err, res) {
         if (err) return callback(err);
-
+        if (res.statusCode !== 200) {
+          console.log("Failed to scrap Google", res.statusCode)
+        }
         if (res.statusCode === 302) {
           var parsed = url.parse(res.headers.location, true);
           if (parsed.pathname !== '/search') {
